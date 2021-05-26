@@ -80,6 +80,18 @@ class Post(models.Model):
     owner = models.ForeignKey(User, verbose_name="作者", on_delete=models.CASCADE)
     created_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
 
+    pv = models.PositiveIntegerField(default=1)
+    uv = models.PositiveIntegerField(default=1)
+
+    @classmethod
+    def hot_posts(cls):
+        return cls.objects.filter(status=cls.STATUS_NORMAL).order_by('-pv')
+
+    """
+    @:param tag_id就是标签的id
+    这段代码的意思是，通过tag来进行列表文章的查找。
+    """
+
     @staticmethod
     def get_by_tag(tag_id):
         try:
@@ -91,6 +103,11 @@ class Post(models.Model):
             post_list = tag.post_set.filter(status=Post.STATUS_NORMAL).select_related('owner', 'category')
 
         return post_list, tag
+
+    """
+    @:param category_id就是分类的id
+    这段代码的意思是，通过category来进行列表文章的查找。
+    """
 
     @staticmethod
     def get_by_category(category_id):
