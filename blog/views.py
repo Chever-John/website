@@ -1,81 +1,119 @@
-from django.shortcuts import get_object_or_404
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
+from django.core.cache import cache
 from django.views.generic import ListView, DetailView
 
+from comment.models import Comment
+from comment.views import CommentShowMixin
 from config.models import SideBar
 from .models import Post, Category, Tag
 
 
-class CommonViewMixin:
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context.update({
-            'sidebars': self.get_sidebars(),
-        })
-        context.update(self.get_navs())
-        return context
+class CommonMixin(object):
+    def get_category_context(self):
+        categories = Category.objects.filter(status=1)  # TODO: fix magic number
 
-    def get_sidebars(self):
-        return SideBar.objects.filter(status=SideBar.STATUS_SHOW)
-
-    def get_navs(self):
-        categories = Category.objects.filter(status=Category.STATUS_NORMAL)
-        nav_categories = []
-        normal_categories = []
+        nav_cates = []
+        cates = []
         for cate in categories:
             if cate.is_nav:
-                nav_categories.append(cate)
+                nav_cates.append(cate)
             else:
-                normal_categories.append(cate)
-
+                cates.append(cate)
         return {
-            'navs': nav_categories,
-            'categories': normal_categories,
+            'nav_cates': nav_cates,
+            'cates': cates,
         }
 
+    def get_context_data(self, **kwargs):
+        side_bars = SideBar.objects.filter(status=1)
+        recently_posts = Post.objects.filter(status=1)[:10]
+        hot_posts = Post.objects.filter(status=1).order_by('-pv')[:10]
+        recently_comments = Comment.objects.filter(status=1)[:10]
+        kwargs.update({
+            'side_bars': side_bars,
+            'recently_comments': recently_comments,
+            'recently_posts': recently_posts,
+            'hot_posts': hot_posts,
+        })
+        kwargs.update(self.get_category_context())
+        return super(CommonMixin, self).get_context_data(**kwargs)
 
-class IndexView(CommonViewMixin, ListView):
-    queryset = Post.objects.filter(status=Post.STATUS_NORMAL)
-    paginate_by = 5
-    context_object_name = 'post_list'
+
+class BasePostsView(CommonMixin, ListView):
+    model = Post
     template_name = 'blog/list.html'
+    context_object_name = 'posts'
+    paginate_by = 3
+    allow_empty = True
 
 
-class CategoryView(IndexView):
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        category_id = self.kwargs.get('category_id')
-        category = get_object_or_404(Category, pk=category_id)
-        context.update({
-            'category': category,
-        })
-        return context
-
+class IndexView(BasePostsView):
     def get_queryset(self):
-        """ 重写querset，根据分类过滤 """
-        queryset = super().get_queryset()
-        category_id = self.kwargs.get('category_id')
-        return queryset.filter(category_id=category_id)
+        query = self.request.GET.get('query')
+        qs = super(IndexView, self).get_queryset()
+        if query:
+            qs = qs.filter(title__icontains=query)  # select * from blog_post where title like '%query%'
+        return qs
 
-
-class TagView(IndexView):
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        tag_id = self.kwargs.get('tag_id')
-        tag = get_object_or_404(Tag, pk=tag_id)
-        context.update({
-            'tag': tag,
-        })
-        return context
+        query = self.request.GET.get('query')
+        return super(IndexView, self).get_context_data(query=query)
 
+
+class CategoryView(BasePostsView):
     def get_queryset(self):
-        """ 重写querset，根据标签过滤 """
-        queryset = super().get_queryset()
+        qs = super(CategoryView, self).get_queryset()
+        cate_id = self.kwargs.get('category_id')
+        qs = qs.filter(category_id=cate_id)
+        return qs
+
+
+class TagView(BasePostsView):
+    def get_queryset(self):
         tag_id = self.kwargs.get('tag_id')
-        return queryset.filter(tag__id=tag_id)
+        try:
+            tag = Tag.objects.get(id=tag_id)
+        except Tag.DoesNotExist:
+            return []
+
+        posts = tag.posts.all()
+        return posts
 
 
-class PostDetailView(CommonViewMixin, DetailView):
-    queryset = Post.objects.filter(status=Post.STATUS_NORMAL)
+class AuthorView(BasePostsView):
+    def get_queryset(self):
+        author_id = self.kwargs.get('author_id')
+        qs = super(AuthorView, self).get_queryset()
+        if author_id:
+            qs = qs.filter(owner_id=author_id)
+        return qs
+
+
+class PostView(CommonMixin, CommentShowMixin, DetailView):
+    model = Post
     template_name = 'blog/detail.html'
     context_object_name = 'post'
-    pk_url_kwarg = 'post_id'
+
+    def get(self, request, *args, **kwargs):
+        response = super(PostView, self).get(request, *args, **kwargs)
+        self.pv_uv()
+        return response
+
+    def pv_uv(self):
+        # 增加pv
+        # 判断用户，增加uv
+        sessionid = self.request.COOKIES.get('sessionid')
+        if not sessionid:
+            return
+
+        pv_key = 'pv:%s:%s' % (sessionid, self.request.path)
+        if not cache.get(pv_key):
+            self.object.increase_pv()
+            cache.set(pv_key, 1, 30)
+
+        uv_key = 'uv:%s:%s' % (sessionid, self.request.path)
+        if not cache.get(uv_key):
+            self.object.increase_uv()
+            cache.set(uv_key, 1, 60 * 60 * 24)

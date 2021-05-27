@@ -1,23 +1,28 @@
-from django.urls import path, re_path
-from django.contrib import admin
+# coding:utf-8
+from __future__ import unicode_literals
 
-from blog.views import (
-    IndexView, CategoryView, TagView,
-    PostDetailView,
-)
-from config.views import links
+from django.contrib import admin
+from django.urls import re_path, path
+
 from .custom_site import custom_site
+from blog.views import (
+    IndexView, CategoryView, TagView, PostView,
+    AuthorView
+)
+from config.views import LinkView
+from comment.views import CommentView
 
 urlpatterns = [
     re_path(r'^$', IndexView.as_view(), name='index'),
-    re_path(r'^category/(?P<category_id>\d+)/$', CategoryView.as_view(), name='category-list'),
-    re_path(r'^tag/(?P<tag_id>\d+)/$', TagView.as_view(), name='tag-list'),
-    re_path(r'^post/(?P<post_id>\d+).html$', PostDetailView.as_view(), name='post-detail'),
-    # re_path(r'^links/$', links),
-    # re_path(r'^super_admin/', admin.site.urls),
-    # re_path(r'^/admin/', custom_site.urls),
+    re_path(r'^category/(?P<category_id>\d+)/$', CategoryView.as_view(), name='category'),
+    re_path(r'^tag/(?P<tag_id>\d+)/$', TagView.as_view(), name='tag'),
+    re_path(r'^post/(?P<pk>\d+)/$', PostView.as_view(), name='detail'),
+    re_path(r'^author/(?P<author_id>\d+)/$', AuthorView.as_view(), name='author'),
+    re_path(r'^links/$', LinkView.as_view(), name='links'),
+    re_path(r'^comment/$', CommentView.as_view(), name='comment'),
 
-    path('links/', links, name='links'),
-    path('super_admin/', admin.site.urls, name='super-admin'),
-    path('admin/', custom_site.urls, name='admin'),
+    path('admin/', admin.site.urls, name='admin'),
+    path('cus_admin/', custom_site.urls, name='cus_admin'),
+
+    # re_path(r'^search/$', SearchView.as_view(), name='search'),
 ]
