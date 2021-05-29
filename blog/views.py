@@ -9,7 +9,6 @@ from comment.views import CommentShowMixin
 from config.models import SideBar
 from .models import Post, Category, Tag
 
-
 class CommonMixin(object):
     def get_category_context(self):
         categories = Category.objects.filter(status=1)  # TODO: fix magic number
