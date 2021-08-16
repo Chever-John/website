@@ -9,21 +9,24 @@ from comment.views import CommentShowMixin
 from config.models import SideBar
 from .models import Post, Category, Tag
 
-class CommonMixin(object):
-    def get_category_context(self):
-        categories = Category.objects.filter(status=1)  # TODO: fix magic number
 
-        nav_cates = []
-        cates = []
-        for cate in categories:
-            if cate.is_nav:
-                nav_cates.append(cate)
-            else:
-                cates.append(cate)
-        return {
-            'nav_cates': nav_cates,
-            'cates': cates,
-        }
+def get_category_context():
+    categories = Category.objects.filter(status=1)
+
+    nav_cates = []
+    cates = []
+    for cate in categories:
+        if cate.is_nav:
+            nav_cates.append(cate)
+        else:
+            cates.append(cate)
+    return {
+        'nav_cates': nav_cates,
+        'cates': cates,
+    }
+
+
+class CommonMixin(object):
 
     def get_context_data(self, **kwargs):
         side_bars = SideBar.objects.filter(status=1)
@@ -36,7 +39,7 @@ class CommonMixin(object):
             'recently_posts': recently_posts,
             'hot_posts': hot_posts,
         })
-        kwargs.update(self.get_category_context())
+        kwargs.update(get_category_context())
         return super(CommonMixin, self).get_context_data(**kwargs)
 
 
@@ -53,7 +56,7 @@ class IndexView(BasePostsView):
         query = self.request.GET.get('query')
         qs = super(IndexView, self).get_queryset()
         if query:
-            qs = qs.filter(title__icontains=query)  # select * from blog_post where title like '%query%'
+            qs = qs.filter(title__icontains=query)
         return qs
 
     def get_context_data(self, **kwargs):

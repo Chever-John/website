@@ -5,11 +5,11 @@ from pprint import pprint as pp
 
 from django.contrib.auth.models import User
 from django.db import connection
-from django.db.models import F, Q, Count, Sum
+from django.db.models import F, Q, Sum
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from .models import Category, Post
+from .models import Category
 
 
 class TestCategory(TestCase):
@@ -23,13 +23,13 @@ class TestCategory(TestCase):
 
     @override_settings(DEBUG=True)
     def test_filter(self):
-        categories = Category.objects.filter(
+        Category.objects.filter(
             (Q(id=1) & Q(id=2))
         )
 
-        category = Category.objects.filter(id=1).update(status=F('status') + 1)
+        Category.objects.filter(id=1).update(status=F('status') + 1)
 
-        user = User.objects.annotate(cate_sum=Sum('category__status')).get(username="the5fire")
+        User.objects.annotate(cate_sum=Sum('category__status')).get(username="the5fire")
         pp(connection.queries)
 
     def test_values(self):

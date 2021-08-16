@@ -6,6 +6,9 @@ from .models import Comment
 
 
 class CommentShowMixin(object):
+    def __init__(self):
+        self.request = None
+
     def get_comments(self):
         target = self.request.path
         comments = Comment.objects.filter(target=target)

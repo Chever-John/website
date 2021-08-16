@@ -52,7 +52,6 @@ class Post(models.Model):
 
         return super(Post, self).save(*args, **kwargs)
 
-
     def __unicode__(self):
         return self.title
 
