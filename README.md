@@ -1,7 +1,7 @@
 # Welcome
 我们是来自江苏科技大学（张家港校区）以及苏州理工学院的兴趣社团——网络协会，热爱技术和开源。
 
-本项目即是@Chever-John 捐献的多人博客系统
+本项目即是@[Chever-John](https://github.com/Chever-John) 捐献的多人博客系统
 
 本项目 inspired by 胡阳老师的《Django企业开发实战》一书搭建。
 
